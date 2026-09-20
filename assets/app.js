@@ -23,7 +23,7 @@ const hl = (text, q) => {
 };
 
 async function loadAll() {
-  const files = ['profile', 'publications', 'projects', 'patents', 'site'];
+  const files = ['profile', 'publications', 'projects', 'patents', 'site', 'research'];
   const res = await Promise.all(files.map(f =>
     fetch(`data/${f}.json`, { cache: 'no-store' }).then(r => {
       if (!r.ok) throw new Error(`data/${f}.json 讀取失敗 (${r.status})`);
@@ -82,6 +82,20 @@ function pageHome() {
           <p class="v">${esc(x.title)}<small>${esc(x.funder)}　${esc(x.role)}</small></p>
         </div>`).join('')}
     </div>
+  </section>
+
+  <section class="block">
+    <h2 class="sec">獲獎紀錄</h2>
+    <p class="sec-note">共 ${p.awards.length} 項。</p>
+    <ul class="plain cols2">${p.awards.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
+  </section>
+
+  <section class="block">
+    <h2 class="sec">對外演講與授課</h2>
+    <p class="sec-note">共 ${p.talks.length} 場，依時間排列。</p>
+    <div class="simple">
+      ${p.talks.map(t => `<div class="row"><div class="k">${esc(t.year)}</div><p class="v">${esc(t.title)}<small>${esc(t.host)}</small></p></div>`).join('')}
+    </div>
   </section>`;
 }
 
@@ -132,23 +146,75 @@ function renderPubs() {
 }
 
 function pageProjects() {
-  const groups = [
-    ['東海大學', DATA.projects.filter(p => p.org === '東海大學')],
-    ['工研院資通所', DATA.projects.filter(p => p.org !== '東海大學')]
+  const cats = [
+    ['主持研究計畫', 'host'],
+    ['其他參與重要研究計畫', 'other']
   ];
+  const orgs = ['東海大學', '工研院資通所'];
+
   return `
   <section class="block" style="border-top:none;padding-top:44px">
     <h2 class="sec">研究計畫</h2>
-    <p class="sec-note">共 ${DATA.projects.length} 項，依服務單位與時間排列。</p>
-    ${groups.map(([name, list]) => `
-      <h3 style="font-family:'Noto Serif TC',serif;color:var(--ink);font-size:17px;margin:32px 0 10px">${name}（${list.length}）</h3>
-      <div class="simple">
-        ${list.map(x => `
-          <div class="row">
-            <div class="k">${esc(x.start)} – ${esc(x.end)}</div>
-            <p class="v">${esc(x.title)}<small>${esc(x.funder)}　${esc(x.role)}</small></p>
-          </div>`).join('')}
-      </div>`).join('')}
+    <p class="sec-note">共 ${DATA.projects.length} 項，依主持／參與身分與服務單位分類。</p>
+    ${cats.map(([label, cat]) => {
+      const inCat = DATA.projects.filter(p => p.category === cat);
+      return `
+      <h3 class="cat-head">${label}（${inCat.length}）</h3>
+      ${orgs.map(org => {
+        const list = inCat.filter(p => p.org === org);
+        if (!list.length) return '';
+        return `
+        <h4 class="org-head">${org}</h4>
+        <div class="simple">
+          ${list.map(x => `
+            <div class="row">
+              <div class="k">${esc(x.start)} – ${esc(x.end)}</div>
+              <p class="v">${esc(x.title)}<small>${esc(x.funder)}　${esc(x.role)}</small></p>
+            </div>`).join('')}
+        </div>`;
+      }).join('')}`;
+    }).join('')}
+  </section>`;
+}
+
+function pageResearch() {
+  const r = DATA.research;
+  return `
+  <section class="block" style="border-top:none;padding-top:44px">
+    <h2 class="sec">實驗室研究方向簡介　<span class="year-tag">${esc(r.year)}</span></h2>
+    <p class="sec-note">${esc(r.lab_name)}　指導老師：${esc(r.advisor)}</p>
+    <p class="lead-text">${esc(r.lead)}</p>
+    ${r.pdf && r.pdf.file ? `
+      <a class="dl" href="${esc(r.pdf.file)}" download>
+        <span class="dl-icon">PDF</span>
+        <span><b>${esc(r.pdf.label)}</b><small>${esc(r.pdf.note)}</small></span>
+      </a>` : ''}
+  </section>
+
+  <section class="block">
+    <h2 class="sec">方向與特色</h2>
+    <div class="feat">
+      ${r.features.map((f, i) => `
+        <div class="feat-item">
+          <span class="num">${i + 1}</span>
+          <div><h3>${esc(f.title)}</h3><p>${esc(f.desc)}</p></div>
+        </div>`).join('')}
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="sec">研究主題</h2>
+    <p class="sec-note">本實驗室目前及近期的研究主題涵蓋以下四個面向。</p>
+    ${r.topics.map(t => `
+      <h3 class="cat-head">${esc(t.group)}</h3>
+      <ul class="plain">${t.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`).join('')}
+  </section>
+
+  <section class="block">
+    <h2 class="sec">研究成果</h2>
+    ${r.achievements.map(a => `
+      <h3 class="cat-head">${esc(a.group)}</h3>
+      <ul class="plain">${a.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`).join('')}
   </section>`;
 }
 
@@ -205,20 +271,7 @@ function pageAbout() {
       ${p.experience.map(e => `<div class="row"><div class="k">${esc(e.period)}</div><p class="v">${esc(e.org)}<small>${esc(e.role)}</small></p></div>`).join('')}
     </div>
   </section>
-
-  <section class="block">
-    <h2 class="sec">獲獎紀錄</h2>
-    <p class="sec-note">共 ${p.awards.length} 項。</p>
-    <ul class="plain">${p.awards.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
-  </section>
-
-  <section class="block">
-    <h2 class="sec">對外演講與授課</h2>
-    <p class="sec-note">共 ${p.talks.length} 場。</p>
-    <div class="simple">
-      ${p.talks.map(t => `<div class="row"><div class="k">${esc(t.year)}</div><p class="v">${esc(t.title)}<small>${esc(t.host)}</small></p></div>`).join('')}
-    </div>
-  </section>`;
+`;
 }
 
 function pagePeople() {
@@ -240,6 +293,7 @@ function pagePeople() {
 
 const ROUTES = [
   ['#/', '首頁', pageHome],
+  ['#/research', '研究方向', pageResearch],
   ['#/publications', '論文著作', pagePublications],
   ['#/projects', '研究計畫', pageProjects],
   ['#/patents', '專利', pagePatents],

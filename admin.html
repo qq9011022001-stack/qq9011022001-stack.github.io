@@ -45,6 +45,10 @@ input.find{font:inherit;font-size:14px;padding:6px 12px;border:1px solid var(--l
 .cfg h3{font-family:"Noto Serif TC",serif;color:var(--ink);font-size:16px;margin:0 0 14px}
 .cfg .hint{font-size:12.5px;color:var(--muted);line-height:1.7;margin:12px 0 0}
 .dirty{font-size:13px;color:var(--warn)}
+.simple-info .row{display:grid;grid-template-columns:110px 1fr;gap:14px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.simple-info .row:last-child{border-bottom:none}
+.simple-info .k{color:var(--muted);font-size:13px}
+.simple-info .v{margin:0}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 20px;border-radius:5px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none}
 #toast.show{opacity:1}
 @media(max-width:700px){.grid2{grid-template-columns:1fr}}
@@ -58,7 +62,8 @@ input.find{font:inherit;font-size:14px;padding:6px 12px;border:1px solid var(--l
     <span class="dirty" id="dirty"></span>
     <button class="act" id="btn-push">儲存到 GitHub</button>
     <button class="act ghost" id="btn-save">下載 JSON</button>
-    <button class="act ghost" id="btn-cfg">設定</button>
+    <button class="act ghost" id="btn-cfg">連線資訊</button>
+    <button class="act ghost" id="btn-logout">登出</button>
     <a class="act ghost" href="index.html" style="text-decoration:none;display:inline-block">回網站</a>
   </div>
 </div></header>
@@ -66,24 +71,14 @@ input.find{font:inherit;font-size:14px;padding:6px 12px;border:1px solid var(--l
 <main>
   <div class="note">
     <p><b>使用方式</b>：編輯資料後按右上角「<b>儲存到 GitHub</b>」，會直接寫回 repo，網站一到兩分鐘後自動更新。</p>
-    <p>第一次使用請先按「設定」填入存取權杖（Token）。若不想設定，也可以按「下載 JSON」後手動上傳到 GitHub。</p>
+    <p>離開電腦前請按「登出」。若儲存失敗，可先按「下載 JSON」保存修改。</p>
   </div>
 
   <div class="cfg" id="cfg-panel" hidden>
-    <h3>GitHub 連線設定</h3>
-    <div class="grid2">
-      <div class="f"><label for="c-owner">GitHub 帳號</label><input type="text" id="c-owner" placeholder="例如 oldyan"></div>
-      <div class="f"><label for="c-repo">Repository 名稱</label><input type="text" id="c-repo" placeholder="例如 chiao-lab"></div>
-      <div class="f"><label for="c-branch">分支</label><input type="text" id="c-branch" value="main"></div>
-      <div class="f"><label for="c-token">存取權杖 Personal Access Token</label><input type="password" id="c-token" placeholder="github_pat_... 或 ghp_..."></div>
-    </div>
-    <p class="hint">權杖存在這台電腦的瀏覽器裡，不會傳給任何第三方，只會用來呼叫 GitHub API。共用電腦請勿儲存。<br>
-    取得方式：GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → 選這個 repo → Repository permissions 的 <b>Contents</b> 設為 <b>Read and write</b>。</p>
-    <div class="rowbtns">
-      <button class="act" id="c-save">儲存設定</button>
-      <button class="act ghost" id="c-test">測試連線</button>
-      <button class="act danger" id="c-clear">清除權杖</button>
-    </div>
+    <h3>GitHub 連線資訊</h3>
+    <div class="simple-info" id="cfg-info"></div>
+    <p class="hint">權杖已用你的密碼加密後存在這台電腦，本頁只在登入期間於記憶體中使用。關閉瀏覽器分頁即自動登出。</p>
+    <div class="rowbtns"><button class="act ghost" id="c-test">測試連線</button></div>
   </div>
 
   <div class="tabs" id="tabs"></div>
@@ -121,18 +116,19 @@ const SCHEMA = {
   },
   projects: {
     file:'projects.json', label:'研究計畫', array:true,
-    title: x => x.title||'（未命名）',
+    title: x => (x.category==='other'?'［參與］':'')+(x.title||'（未命名）'),
     sub: x => `${x.start||''}`,
     fields:[
       {k:'title',label:'計畫名稱',type:'textarea'},
+      {k:'category',label:'類別',type:'select',options:{host:'主持研究計畫',other:'其他參與重要研究計畫'}},
       {k:'funder',label:'補助／委託單位',type:'text'},
       {k:'role',label:'擔任角色',type:'text'},
-      {k:'org',label:'執行機構',type:'text'},
+      {k:'org',label:'執行機構',type:'select',options:{'東海大學':'東海大學','工研院資通所':'工研院資通所'}},
       {k:'start',label:'起（如 2026.07）',type:'text'},
       {k:'end',label:'訖（如 2027.02）',type:'text'},
       {k:'year',label:'排序年份',type:'number'}
     ],
-    blank:{title:'',funder:'國家科學委員會',role:'主持人',org:'東海大學',start:'',end:'',year:new Date().getFullYear()}
+    blank:{title:'',category:'host',funder:'國家科學委員會',role:'主持人',org:'東海大學',start:'',end:'',year:new Date().getFullYear()}
   },
   patents: {
     file:'patents.json', label:'專利', array:true,
@@ -147,6 +143,34 @@ const SCHEMA = {
       {k:'year',label:'排序年份',type:'number'}
     ],
     blank:{title:'',inventors:'',country:'中華民國',number:'',date:'',year:new Date().getFullYear()}
+  },
+  research_info: {
+    file:'research.json', label:'研究方向｜基本', array:false,
+    fields:[
+      {k:'year',label:'年度（顯示於標題旁）',type:'text'},
+      {k:'lab_name',label:'實驗室名稱',type:'text'},
+      {k:'advisor',label:'指導老師',type:'text'},
+      {k:'lead',label:'開頭簡介',type:'textarea'},
+      {k:'pdf',label:'PDF 下載資訊（label 顯示名稱／file 檔案路徑／note 說明）',type:'json'}
+    ]
+  },
+  research_features: {
+    file:'research.json', path:'features', label:'研究方向｜特色', array:true,
+    title: x => x.title||'（未命名）', sub: () => '',
+    fields:[{k:'title',label:'特色標題',type:'text'},{k:'desc',label:'說明',type:'textarea'}],
+    blank:{title:'',desc:''}
+  },
+  research_topics: {
+    file:'research.json', path:'topics', label:'研究方向｜主題', array:true,
+    title: x => x.group||'（未命名）', sub: x => `${(x.items||[]).length} 項`,
+    fields:[{k:'group',label:'主題分類',type:'text'},{k:'items',label:'細項（一行一個）',type:'lines'}],
+    blank:{group:'',items:[]}
+  },
+  research_results: {
+    file:'research.json', path:'achievements', label:'研究方向｜成果', array:true,
+    title: x => x.group||'（未命名）', sub: x => `${(x.items||[]).length} 項`,
+    fields:[{k:'group',label:'成果分類',type:'text'},{k:'items',label:'細項（一行一個）',type:'lines'}],
+    blank:{group:'',items:[]}
   },
   news: {
     file:'site.json', path:'news', label:'最新消息', array:true,
@@ -191,7 +215,7 @@ const SCHEMA = {
   }
 };
 
-const FILES = ['profile.json','publications.json','projects.json','patents.json','site.json'];
+const FILES = ['profile.json','publications.json','projects.json','patents.json','site.json','research.json'];
 const store = {};
 let tab = 'publications';
 let filter = '';
@@ -336,70 +360,42 @@ window.addEventListener('beforeunload', e => {
   if(dirty.size){ e.preventDefault(); e.returnValue=''; }
 });
 
-/* ---------- GitHub 設定 ---------- */
-const CFG_KEY = 'chiaolab-admin-cfg';
-const cfg = () => { try{ return JSON.parse(localStorage.getItem(CFG_KEY))||{}; }catch(e){ return {}; } };
+/* ---------- 登入狀態與 GitHub 連線 ---------- */
+const SESSION = 'chiaolab-session';
+let GH = null;
+try { GH = JSON.parse(sessionStorage.getItem(SESSION)); } catch(e) {}
+if (!GH || !GH.token) location.replace('login.html');   // 未登入直接踢回登入頁
+
+const cfg = () => GH || {};
 const ghHeaders = () => ({
   'Authorization': 'Bearer ' + cfg().token,
   'Accept': 'application/vnd.github+json',
   'X-GitHub-Api-Version': '2022-11-28'
 });
 
-function guessRepo(){
-  // 從目前網址推測 owner / repo，省得手動填
-  const host = location.hostname, path = location.pathname.split('/').filter(Boolean);
-  const out = {};
-  if(host.endsWith('.github.io')){
-    out.owner = host.replace('.github.io','');
-    out.repo = path.length > 1 ? path[0] : host;   // 根網址時 repo 名 = 網域本身
-  }
-  return out;
-}
-
-function openCfg(){
-  const p = document.getElementById('cfg-panel');
-  p.hidden = !p.hidden;
-  if(!p.hidden){
-    const c = { ...guessRepo(), branch:'main', ...cfg() };
-    document.getElementById('c-owner').value = c.owner||'';
-    document.getElementById('c-repo').value = c.repo||'';
-    document.getElementById('c-branch').value = c.branch||'main';
-    document.getElementById('c-token').value = c.token||'';
-  }
-}
-document.getElementById('btn-cfg').onclick = openCfg;
-
-document.getElementById('c-save').onclick = () => {
-  localStorage.setItem(CFG_KEY, JSON.stringify({
-    owner: document.getElementById('c-owner').value.trim(),
-    repo: document.getElementById('c-repo').value.trim(),
-    branch: document.getElementById('c-branch').value.trim()||'main',
-    token: document.getElementById('c-token').value.trim()
-  }));
-  document.getElementById('cfg-panel').hidden = true;
-  toast('設定已儲存在這台電腦');
+document.getElementById('btn-logout').onclick = () => {
+  if (dirty.size && !confirm('還有未儲存的變更，確定要登出嗎？')) return;
+  sessionStorage.removeItem(SESSION);
+  location.replace('login.html');
 };
 
-document.getElementById('c-clear').onclick = () => {
-  localStorage.removeItem(CFG_KEY);
-  document.getElementById('c-token').value='';
-  toast('權杖已清除');
+document.getElementById('btn-cfg').onclick = () => {
+  const p = document.getElementById('cfg-panel');
+  p.hidden = !p.hidden;
+  const c = cfg();
+  document.getElementById('cfg-info').innerHTML =
+    `<div class="row"><div class="k">Repository</div><p class="v">${esc(c.owner)}/${esc(c.repo)}</p></div>
+     <div class="row"><div class="k">分支</div><p class="v">${esc(c.branch)}</p></div>
+     <div class="row"><div class="k">權杖</div><p class="v">已載入（${esc(String(c.token).slice(0,10))}…）</p></div>`;
 };
 
 document.getElementById('c-test').onclick = async () => {
-  const c = {
-    owner: document.getElementById('c-owner').value.trim(),
-    repo: document.getElementById('c-repo').value.trim(),
-    branch: document.getElementById('c-branch').value.trim()||'main',
-    token: document.getElementById('c-token').value.trim()
-  };
-  if(!c.owner||!c.repo||!c.token) return alert('請先填完帳號、repo 名稱與權杖。');
-  try{
-    const r = await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}`,
-      { headers:{ 'Authorization':'Bearer '+c.token, 'Accept':'application/vnd.github+json' } });
-    if(r.ok){ const j = await r.json(); alert(`連線成功：${j.full_name}\n權限：${j.permissions&&j.permissions.push?'可寫入':'唯讀（權杖權限不足）'}`); }
-    else alert(`連線失敗（HTTP ${r.status}）\n${r.status===404?'找不到 repo，請檢查帳號與名稱拼字，或權杖沒有選到這個 repo。':r.status===401?'權杖無效或已過期。':''}`);
-  }catch(e){ alert('連線錯誤：'+e.message); }
+  const c = cfg();
+  try {
+    const r = await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}`, { headers: ghHeaders() });
+    if (r.ok) { const j = await r.json(); alert(`連線成功：${j.full_name}\n權限：${j.permissions && j.permissions.push ? '可寫入' : '唯讀（權杖權限不足）'}`); }
+    else alert(`連線失敗（HTTP ${r.status}）\n${r.status===404?'找不到 repo，請檢查名稱或權杖範圍。':r.status===401?'權杖無效或已過期，請登出後重設。':''}`);
+  } catch(e) { alert('連線錯誤：' + e.message); }
 };
 
 /* UTF-8 轉 base64（GitHub API 只收 base64） */
@@ -435,8 +431,6 @@ async function pushFile(file, msg){
 }
 
 document.getElementById('btn-push').onclick = async () => {
-  const c = cfg();
-  if(!c.token || !c.owner || !c.repo){ openCfg(); return alert('請先完成 GitHub 連線設定。'); }
   if(!dirty.size) return toast('目前沒有需要儲存的變更');
 
   const btn = document.getElementById('btn-push');

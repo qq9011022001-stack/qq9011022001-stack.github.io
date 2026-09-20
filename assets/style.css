@@ -122,3 +122,48 @@ ul.plain li:last-child{border-bottom:none}
   .site-head,.filters,.site-foot{display:none}
   body{background:#fff}
 }
+
+/* ---- 分類標題 ---- */
+h3.cat-head{
+  font-family:"Noto Serif TC",serif;color:var(--ink);font-size:17px;
+  margin:30px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line);
+}
+h4.org-head{
+  font-size:14px;color:var(--muted);font-weight:500;margin:18px 0 4px;
+}
+.year-tag{
+  font-family:"Noto Sans TC",sans-serif;font-size:13px;color:#fff;
+  background:var(--ink);border-radius:3px;padding:2px 9px;vertical-align:4px;
+}
+p.lead-text{font-size:16px;color:var(--ink-soft);max-width:62ch;margin:0 0 24px;line-height:1.9}
+
+/* ---- PDF 下載 ---- */
+a.dl{
+  display:flex;align-items:center;gap:16px;background:var(--panel);
+  border-left:3px solid var(--ink);padding:16px 20px;text-decoration:none;max-width:560px;
+}
+a.dl:hover{background:#e9e6dc;text-decoration:none}
+a.dl .dl-icon{
+  font-size:12px;font-weight:700;letter-spacing:.5px;color:#fff;background:var(--mark);
+  padding:8px 10px;border-radius:4px;flex-shrink:0;
+}
+a.dl b{display:block;color:var(--ink);font-size:15px;font-weight:500}
+a.dl small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+
+/* ---- 方向與特色 ---- */
+.feat{display:grid;gap:22px}
+.feat-item{display:grid;grid-template-columns:34px 1fr;gap:16px}
+.feat-item .num{
+  width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:14px;margin-top:3px;
+}
+.feat-item h3{font-family:"Noto Serif TC",serif;font-size:17px;color:var(--ink);margin:0 0 5px}
+.feat-item p{margin:0;font-size:15px;color:var(--muted);line-height:1.85}
+
+/* ---- 雙欄清單 ---- */
+ul.plain.cols2{columns:2;column-gap:40px}
+ul.plain.cols2 li{break-inside:avoid}
+@media (max-width:860px){
+  ul.plain.cols2{columns:1}
+  .feat-item{grid-template-columns:28px 1fr;gap:12px}
+}
