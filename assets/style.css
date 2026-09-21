@@ -167,3 +167,4 @@ ul.plain.cols2 li{break-inside:avoid}
   ul.plain.cols2{columns:1}
   .feat-item{grid-template-columns:28px 1fr;gap:12px}
 }
+

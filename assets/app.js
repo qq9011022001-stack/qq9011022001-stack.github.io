@@ -84,8 +84,8 @@ function pageHome() {
         </div>`).join('')}
     </div>
   </section>
-
-  </section>`;
+  ${awardsBlock()}
+  ${talksBlock()}`;
 }
 
 let pubState = { type: 'all', q: '' };
@@ -230,20 +230,20 @@ function yearRail(list, render) {
        + (unknown.length ? block('其他', unknown) : '');
 }
 
-function pageAwards() {
+function awardsBlock(style) {
   const list = DATA.profile.awards;
   return `
-  <section class="block" style="border-top:none;padding-top:44px">
+  <section class="block" ${style || ''}>
     <h2 class="sec">獲獎</h2>
     <p class="sec-note">共 ${list.length} 項，依時間排列。</p>
     ${yearRail(list, a => `<div class="entry"><p class="t">${esc(a.title)}</p></div>`)}
   </section>`;
 }
 
-function pageTalks() {
+function talksBlock(style) {
   const list = [...DATA.profile.talks].sort((a, b) => String(b.year).localeCompare(String(a.year)));
   return `
-  <section class="block" style="border-top:none;padding-top:44px">
+  <section class="block" ${style || ''}>
     <h2 class="sec">對外演講</h2>
     <p class="sec-note">共 ${list.length} 場，依時間排列。</p>
     ${yearRail(list, t => `
@@ -253,6 +253,10 @@ function pageTalks() {
       </div>`)}
   </section>`;
 }
+
+const PAGE_TOP = 'style="border-top:none;padding-top:44px"';
+function pageAwards() { return awardsBlock(PAGE_TOP); }
+function pageTalks() { return talksBlock(PAGE_TOP); }
 
 function pageAbout() {
   const p = DATA.profile, s = DATA.site;
