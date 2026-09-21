@@ -109,7 +109,7 @@ const toast = m => { const t=document.getElementById('toast'); t.textContent=m; 
 /* 各資料檔的欄位定義 */
 const SCHEMA = {
   publications: {
-    file:'publications.json', label:'論文著作', array:true,
+    file:'publications.json', label:'發表著作｜論文', array:true,
     title: x => `${x.title||'（未命名）'}`,
     sub: x => x.year,
     fields:[
@@ -137,10 +137,10 @@ const SCHEMA = {
       {k:'end',label:'訖（如 2027.02）',type:'text'},
       {k:'year',label:'排序年份',type:'number'}
     ],
-    blank:{title:'',category:'host',funder:'國家科學委員會',role:'主持人',org:'東海大學',start:'',end:'',year:new Date().getFullYear()}
+    blank:{title:'',category:'host',funder:'國家科學委員會',role:'計畫主持人',org:'東海大學',start:'',end:'',year:new Date().getFullYear()}
   },
   patents: {
-    file:'patents.json', label:'專利', array:true,
+    file:'patents.json', label:'發表著作｜專利', array:true,
     title: x => x.title||'（未命名）',
     sub: x => x.number,
     fields:[
@@ -199,13 +199,13 @@ const SCHEMA = {
     blank:{group:'碩士班',name:'',year:'',topic:''}
   },
   awards: {
-    file:'profile.json', path:'awards', label:'獲獎紀錄', array:true, plain:true,
-    title: x => x, sub: () => '',
-    fields:[{k:'_',label:'獎項名稱',type:'textarea'}],
-    blank:''
+    file:'profile.json', path:'awards', label:'獲獎', array:true,
+    title: x => x.title||'（未命名）', sub: x => x.year||'年份待補',
+    fields:[{k:'year',label:'年份（如 2026，不確定可留空）',type:'text'},{k:'title',label:'獎項名稱',type:'textarea'}],
+    blank:{year:String(new Date().getFullYear()),title:''}
   },
   talks: {
-    file:'profile.json', path:'talks', label:'演講授課', array:true,
+    file:'profile.json', path:'talks', label:'對外演講', array:true,
     title: x => x.title||'（未命名）', sub: x => x.year,
     fields:[{k:'year',label:'時間（如 2026.08）',type:'text'},{k:'title',label:'講題',type:'textarea'},{k:'host',label:'主辦單位／場合',type:'text'}],
     blank:{year:'',title:'',host:''}

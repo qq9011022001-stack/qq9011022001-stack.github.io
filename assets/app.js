@@ -8,7 +8,8 @@ const PUB_TYPES = {
   standard: '國際標準提案',
   journal_zh: '國內期刊與專書',
   conf_zh: '國內研討會',
-  report: '技術報告與法規'
+  report: '技術報告與法規',
+  patent: '專利'
 };
 
 const esc = s => String(s == null ? '' : s)
@@ -84,32 +85,29 @@ function pageHome() {
     </div>
   </section>
 
-  <section class="block">
-    <h2 class="sec">獲獎紀錄</h2>
-    <p class="sec-note">共 ${p.awards.length} 項。</p>
-    <ul class="plain cols2">${p.awards.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
-  </section>
-
-  <section class="block">
-    <h2 class="sec">對外演講與授課</h2>
-    <p class="sec-note">共 ${p.talks.length} 場，依時間排列。</p>
-    <div class="simple">
-      ${p.talks.map(t => `<div class="row"><div class="k">${esc(t.year)}</div><p class="v">${esc(t.title)}<small>${esc(t.host)}</small></p></div>`).join('')}
-    </div>
   </section>`;
 }
 
 let pubState = { type: 'all', q: '' };
 
+/* 專利轉成與著作相同的欄位格式，方便一起篩選、搜尋、排序 */
+function allWorks() {
+  const patents = DATA.patents.map(p => ({
+    type: 'patent', year: p.year, title: p.title, authors: p.inventors,
+    venue: `${p.country}專利　${p.number}　· ${p.date}`, note: '', corresponding: false
+  }));
+  return DATA.publications.concat(patents);
+}
+
 function pagePublications() {
   const types = Object.keys(PUB_TYPES);
   return `
   <section class="block" style="border-top:none;padding-top:44px">
-    <h2 class="sec">論文著作</h2>
-    <p class="sec-note">共 ${DATA.publications.length} 筆。可依類型篩選或以關鍵字搜尋（標題、作者、期刊名皆可）。</p>
+    <h2 class="sec">發表著作</h2>
+    <p class="sec-note">共 ${DATA.publications.length} 筆論文與 ${DATA.patents.length} 件已獲證專利。可依類型篩選或以關鍵字搜尋（標題、作者、期刊名、專利號皆可）。</p>
     <div class="filters">
-      <button data-type="all" class="on">全部</button>
-      ${types.map(t => `<button data-type="${t}">${PUB_TYPES[t]}</button>`).join('')}
+      <button data-type="all" class="${pubState.type === 'all' ? 'on' : ''}">全部</button>
+      ${types.map(t => `<button data-type="${t}" class="${pubState.type === t ? 'on' : ''}">${PUB_TYPES[t]}</button>`).join('')}
       <input class="search" type="search" placeholder="搜尋關鍵字…" value="${esc(pubState.q)}">
     </div>
     <div id="pub-list"></div>
@@ -120,7 +118,7 @@ function renderPubs() {
   const box = document.getElementById('pub-list');
   if (!box) return;
   const q = pubState.q.trim().toLowerCase();
-  const list = DATA.publications.filter(p =>
+  const list = allWorks().filter(p =>
     (pubState.type === 'all' || p.type === pubState.type) &&
     (!q || (p.title + ' ' + p.authors + ' ' + p.venue).toLowerCase().includes(q))
   );
@@ -218,24 +216,41 @@ function pageResearch() {
   </section>`;
 }
 
-function pagePatents() {
-  const years = [...new Set(DATA.patents.map(p => p.year))].sort((a, b) => b - a);
+/* 依年份分組的通用時間軸 */
+function yearRail(list, render) {
+  const known = list.filter(x => x.year);
+  const unknown = list.filter(x => !x.year);
+  const years = [...new Set(known.map(x => String(x.year).slice(0, 4)))].sort((a, b) => b - a);
+  const block = (label, items) => `
+    <div class="rail">
+      <div class="rail-year">${label}</div>
+      <div class="rail-items">${items.map(render).join('')}</div>
+    </div>`;
+  return years.map(y => block(y, known.filter(x => String(x.year).startsWith(y)))).join('')
+       + (unknown.length ? block('其他', unknown) : '');
+}
+
+function pageAwards() {
+  const list = DATA.profile.awards;
   return `
   <section class="block" style="border-top:none;padding-top:44px">
-    <h2 class="sec">已獲證專利</h2>
-    <p class="sec-note">共 ${DATA.patents.length} 件，涵蓋中華民國、美國、日本、韓國與中國大陸。</p>
-    ${years.map(y => `
-      <div class="rail">
-        <div class="rail-year">${y}</div>
-        <div class="rail-items">
-          ${DATA.patents.filter(p => p.year === y).map(p => `
-            <div class="entry">
-              <p class="t"><span class="badge">${esc(p.country)}</span>${esc(p.title)}</p>
-              <p class="a">${esc(p.inventors)}</p>
-              <p class="v">專利號 ${esc(p.number)}　· ${esc(p.date)}</p>
-            </div>`).join('')}
-        </div>
-      </div>`).join('')}
+    <h2 class="sec">獲獎</h2>
+    <p class="sec-note">共 ${list.length} 項，依時間排列。</p>
+    ${yearRail(list, a => `<div class="entry"><p class="t">${esc(a.title)}</p></div>`)}
+  </section>`;
+}
+
+function pageTalks() {
+  const list = [...DATA.profile.talks].sort((a, b) => String(b.year).localeCompare(String(a.year)));
+  return `
+  <section class="block" style="border-top:none;padding-top:44px">
+    <h2 class="sec">對外演講</h2>
+    <p class="sec-note">共 ${list.length} 場，依時間排列。</p>
+    ${yearRail(list, t => `
+      <div class="entry">
+        <p class="t">${esc(t.title)}</p>
+        <p class="v">${esc(t.host)}　· ${esc(t.year)}</p>
+      </div>`)}
   </section>`;
 }
 
@@ -294,14 +309,16 @@ function pagePeople() {
 const ROUTES = [
   ['#/', '首頁', pageHome],
   ['#/research', '研究方向', pageResearch],
-  ['#/publications', '論文著作', pagePublications],
+  ['#/publications', '發表著作', pagePublications],
   ['#/projects', '研究計畫', pageProjects],
-  ['#/patents', '專利', pagePatents],
+  ['#/awards', '獲獎', pageAwards],
+  ['#/talks', '對外演講', pageTalks],
   ['#/about', '教師簡歷', pageAbout],
   ['#/people', '成員', pagePeople]
 ];
 
 function render() {
+  if (location.hash === '#/patents') { pubState.type = 'patent'; location.replace('#/publications'); return; }
   const hash = location.hash || '#/';
   const route = ROUTES.find(r => r[0] === hash) || ROUTES[0];
   document.getElementById('app').innerHTML = route[2]();
