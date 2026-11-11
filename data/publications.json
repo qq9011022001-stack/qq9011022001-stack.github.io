@@ -1,5 +1,14 @@
 [
  {
+  "type": "conf_zh",
+  "year": 2026,
+  "title": "生成式人工智慧在觀光工廠元宇宙中的部署與評估",
+  "authors": "陳君典、吳致達、黃耀宗、江日騫、許瑞愷、焦信達*",
+  "venue": "2026 年臺灣網際網路研討會 (TANET 2026)",
+  "note": "",
+  "corresponding": true
+ },
+ {
   "type": "journal_intl",
   "year": 2026,
   "authors": "Yu-Wei Chan, Hsin-Ta Chiao, Cenap Oztepe, Endah Kristiani, Chao-Tung Yang",
